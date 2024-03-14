@@ -1,36 +1,76 @@
 <!DOCTYPE html>
-<html lang="en" >
-<head>
-  <meta charset="UTF-8">
-  <title>CodePen - A Pen by DREAM E</title>
-  <link rel="stylesheet" href="./style.css">
-
-</head>
-<body>
-<!-- partial:index.partial.html -->
-<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>File Transfer</title>
-<link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Sharing</title>
 </head>
 <body>
-<div class="container">
-  <h1>File Transfer</h1>
-  <input type="text" id="connectionNumber" placeholder="Enter Connection Number">
-  <button id="enterNumberButton">Enter Number</button>
-  <input type="file" id="fileInput">
-  <button id="connectButton" disabled>Connect</button>
-  <button id="sendButton" disabled>Send File</button>
-  <progress id="progressBar" value="0" max="100"></progress>
-</div>
-<script src="script.js"></script>
-</body>
-</html>
-<!-- partial -->
-  <script  src="./script.js"></script>
+    <h1>File Sharing</h1>
 
+    <!-- Lista de nombres de usuario -->
+    <h2>Usuarios Conectados</h2>
+    <ul id="userList"></ul>
+
+    <!-- Mostrar el nombre de usuario del cliente -->
+    <p>Tu nombre de usuario es: <span id="currentUser"></span></p>
+
+    <!-- Formulario para cargar archivos y escribir el destinatario -->
+    <form id="uploadForm">
+        <label for="recipient">Enviar a:</label>
+        <input type="text" id="recipient" name="recipient" placeholder="Nombre de usuario" required>
+        <br>
+        <input type="file" id="fileInput" name="fileToUpload" required>
+        <button type="submit">Enviar Archivo</button>
+    </form>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.3/socket.io.js"></script>
+    <script>
+        const socket = io('http://localhost:3000');
+
+        // Obtener y mostrar el nombre de usuario del cliente
+        const currentUser = 'Usuario ' + Math.floor(Math.random() * 1000); // Generar un nombre de usuario único
+        document.getElementById('currentUser').textContent = currentUser;
+
+        // Manejar recepción de nombres de usuario
+        socket.on('userList', (userList) => {
+            const userListElement = document.getElementById('userList');
+            userListElement.innerHTML = ''; // Limpiar la lista antes de actualizar
+            userList.forEach((username) => {
+                const listItem = document.createElement('li');
+                listItem.textContent = username;
+                userListElement.appendChild(listItem);
+            });
+        });
+
+        // Manejar envío de archivos
+        document.getElementById('uploadForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const formData = new FormData(this);
+            const recipient = formData.get('recipient');
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(event) {
+                const fileData = {
+                    recipient: recipient,
+                    filename: file.name,
+                    file: event.target.result
+                };
+                socket.emit('file', fileData);
+                console.log('Archivo enviado:', file.name);
+            };
+
+            reader.readAsDataURL(file);
+            this.reset();
+        });
+
+        // Manejar recepción de nuevos archivos
+        socket.on('newFile', (data) => {
+            console.log('Nuevo archivo disponible:', data.filename);
+            // Aquí puedes mostrar una notificación al usuario destinatario para indicar que hay un nuevo archivo disponible para descargar
+        });
+    </script>
 </body>
 </html>
